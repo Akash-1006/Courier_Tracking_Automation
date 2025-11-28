@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from models import db, Consignment, TrackingHistory
+from models import db, Consignment, TrackingHistory, FranchExpress
 from processor import process_excel
 from flask_cors import CORS
 import pytz
@@ -53,115 +53,116 @@ def send_email(subject, html_body, attachment_path=None):
 
 
 # -----------------------------------------------------------
-# ✅ DAILY EMAIL DIGEST (sent at 9 AM IST)
+#  DAILY EMAIL DIGEST (sent at 9 AM IST)
 # -----------------------------------------------------------
 def generate_daily_report():
     with app.app_context():
         today = datetime.now(IST).date()
+        today_str = today.strftime("%d-%m-%Y")
         print(f"Daily report sent {today}")
-        # ✅ Fetch ONLY pending consignments (is_delivered = False / 0)
-        pending = Consignment.query.filter_by(is_delivered=False).all()
-        if not pending:
-            # You can still send a "nothing pending" email if you prefer.
-            return
 
-        # ✅ Build rows (and keep the CSV too)
-        rows = []
-        for c in pending:
-            rows.append({
-                "CNo": c.cno,
-                "TDate": (
-            datetime
-                .combine(datetime.strptime(c.tdate, "%Y-%m-%d"), datetime.min.time())
-                .astimezone(IST)
-                .strftime("%d-%m-%Y")
-            if c.tdate else "—"
-        ),
-                "Cnee": c.cnee or "—",
-                "Pincode": c.cpincode or "—",
-                "Destination": c.destn or "—",
-                "Weight": c.wt or "—",
-                "Pcs": c.pcs or "—",
-                "Last Status": c.last_status or "—",
-                "Last Checked": (
-                    c.last_checked.astimezone(IST).strftime("%d-%m-%Y %H:%M:%S")
-                    if c.last_checked else "—"
-                )
-            })
+        # Professional Courier Pending
+        professional_pending = Consignment.query.filter_by(is_delivered=False).all()
 
-    df = pd.DataFrame(rows, columns=[
-        "CNo", "TDate", "Cnee", "Pincode", "Destination", "Weight", "Pcs",
-        "Last Status", "Last Checked"
-    ])
+        # Franch Express Pending
+        fe_pending = FranchExpress.query.filter_by(is_delivered=False).all()
 
-    # ✅ Save CSV
+        if not professional_pending and not fe_pending:
+            return  # nothing to report
 
+        def build_rows(items, model_type="normal"):
+            rows = []
+            for c in items:
+                rows.append({
+                    "CNo": c.cno,
+                    "TDate": (
+                        datetime
+                            .combine(datetime.strptime(c.tdate, "%Y-%m-%d"), datetime.min.time())
+                            .astimezone(IST)
+                            .strftime("%d-%m-%Y")
+                        if c.tdate else "—"
+                    ),
+                    "Cnee": c.cnee or "—",
+                    "Pincode": c.cpincode or "—",
+                    "Destination": c.destn or "—",
+                    "Weight": c.wt or "—",
+                    "Pcs": c.pcs or "—",
+                    "Last Status": c.last_status or "—",
+                    "Last Checked": (
+                        c.last_checked.astimezone(IST).strftime("%d-%m-%Y %H:%M:%S")
+                        if c.last_checked else "—"
+                    )
+                })
+            return rows
 
-    # ✅ Build HTML table for email (inline CSS for mail clients)
-    def esc(s):
-        # very light escape for HTML (in case any field contains < or &)
-        return (str(s)
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;"))
+        rows_professional = build_rows(professional_pending)
+        rows_fe = build_rows(fe_pending)
 
-    table_headers = "".join([
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>CNo</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>T-Date</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Cnee</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Pincode</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Destination</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Weight</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Pcs</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Last Status</th>",
-        "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Last Checked (IST)</th>",
-    ])
+        # Light safe escape
+        def esc(s):
+            return (str(s)
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;"))
 
-    table_rows = []
-    for r in rows:
-        table_rows.append(
-            "<tr>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;font-weight:600'>{esc(r['CNo'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['TDate'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Cnee'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Pincode'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Destination'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Weight'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Pcs'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Last Status'])}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Last Checked'])}</td>"
-            "</tr>"
+        def create_table(rows, title):
+            if not rows:
+                return f"<p><b>No pending consignments for {title}</b></p>"
+
+            table_headers = "".join([
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>CNo</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>T-Date</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Cnee</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Pincode</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Destination</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Weight</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Pcs</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Last Status</th>",
+                "<th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;'>Last Checked (IST)</th>",
+            ])
+
+            rows_html = "".join([
+                "<tr>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;font-weight:600'>{esc(r['CNo'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['TDate'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Cnee'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Pincode'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Destination'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Weight'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Pcs'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Last Status'])}</td>" +
+                f"<td style='padding:8px;border-bottom:1px solid #f3f4f6'>{esc(r['Last Checked'])}</td>" +
+                "</tr>"
+                for r in rows
+            ])
+
+            return f"""
+            <h3 style="margin:20px 0 10px 0;">{title} (Pending: {len(rows)})</h3>
+            <table style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;background:#ffffff;border:1px solid #e5e7eb;">
+                <thead style="background:#f9fafb">
+                    <tr>{table_headers}</tr>
+                </thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            """
+
+        # Build full HTML email
+        html_body = f"""
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;">
+          <h2 style="margin:0 0 8px 0;">Pending Consignments Report as on {today_str}</h2>
+          
+          {create_table(rows_professional, " Professional Courier")}
+          <br/><br/>
+
+          {create_table(rows_fe, " Franch Express")}
+        </div>
+        """
+
+        send_email(
+            subject=f" Pending Consignments Report - {today_str}",
+            html_body=html_body
         )
 
-    html_table = (
-        "<table style='border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;"
-        "font-size:14px;color:#111827;background:#ffffff;border:1px solid #e5e7eb;'>"
-        "<thead style='background:#f9fafb'>"
-        f"<tr>{table_headers}</tr>"
-        "</thead>"
-        "<tbody>"
-        + "".join(table_rows) +
-        "</tbody>"
-        "</table>"
-    )
-    today_str = today.strftime("%d-%m-%Y")
-    # ✅ Email body (with table embedded)
-    html_body = f"""
-    <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;">
-      <h2 style="margin:0 0 8px 0;">Pending Consignments Report as on {today_str}</h2>
-      <h6 style="margin:0 0 16px 0;">Total pending: <b>{len(rows)}</b></h6>
-      <p style="margin:0 0 16px 0;">Below is the latest list of consignments that are <b>not delivered</b> as of now.</p>
-      {html_table}
-    </div>
-    """
-    
-
-    # 🔔 Send email with inline table + CSV attachment
-    # Assumes you already have a send_email(subject, html_body, attachment_path) utility.
-    send_email(
-        subject=f"Pending Consignments as on {today_str}",
-        html_body=html_body
-    )
 
 @app.route("/send_daily_email", methods=["GET"])
 def manual_email():
@@ -271,6 +272,75 @@ def list_all():
         for c in consignments
     ])
 
+
+@app.route("/track_franch", methods=["GET"])
+def track_franch():
+    from tracker_franch import get_fe_tracking_info
+    ist = pytz.timezone("Asia/Kolkata")
+    pending = FranchExpress.query.filter_by(is_delivered=False).all()
+
+    for cons in pending:
+        data = get_fe_tracking_info(cons.cno)
+        if not data or data.get("status") != "success":
+            continue
+
+        details = data["data"]
+        status = details.get("dl_status_txt", "")
+
+        cons.last_status = status
+        cons.is_delivered = status.lower() == "delivered"
+        cons.last_checked = datetime.now(ist)
+
+    db.session.commit()
+
+    return jsonify([
+        {
+            "cno": c.cno,
+            "status": c.last_status,
+            "delivered": c.is_delivered,
+            "last_checked": c.last_checked.isoformat() if c.last_checked else None,
+            "tdate": c.tdate,
+            "cnee": c.cnee,
+            "cpincode": c.cpincode,
+            "destn": c.destn,
+            "wt": c.wt,
+            "pcs": c.pcs,
+        }
+        for c in FranchExpress.query.all()
+    ])
+
+@app.route("/upload_fe", methods=["POST"])
+def upload_fe():
+    file = request.files['file']
+    path = f"uploads/{file.filename}"
+    file.save(path)
+
+    from process_excel_fe import process_excel_fe
+    count = process_excel_fe(path)
+    track_franch()
+
+    return jsonify({"message": "FE Excel processed", "count": count})
+
+@app.route("/fe_consignments", methods=["GET"])
+def list_all_fe():
+    consignments = FranchExpress.query.all()
+    return jsonify([
+        {
+            "cno": c.cno,
+            "status": c.last_status,
+            "delivered": c.is_delivered,
+            "last_checked": c.last_checked.isoformat() if c.last_checked else None,
+
+            # 📌 Fields from Franch Express model
+            "tdate": c.tdate,
+            "cnee": c.cnee,
+            "cpincode": c.cpincode,
+            "destn": c.destn,
+            "wt": c.wt,
+            "pcs": c.pcs,
+        }
+        for c in consignments
+    ])
 
 
 if __name__ == "__main__":

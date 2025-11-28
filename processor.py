@@ -1,9 +1,12 @@
 import pandas as pd
 from models import db, Consignment
+import re
 from datetime import datetime
 
 EXPECTED_COLS = ["CNo", "Tdate", "cnee", "CPincode", "Destn", "Wt", "Pcs"]
 
+
+VALID_CNO_REGEX = re.compile(r"^MAA\d+$", re.IGNORECASE)
 def process_excel(path):
     df = pd.read_excel(path, dtype=str)
 
@@ -16,7 +19,7 @@ def process_excel(path):
 
     for _, row in df.iterrows():
         cno = str(row["CNo"]).strip().upper()
-        if not cno:
+        if not cno or not VALID_CNO_REGEX.match(cno):
             continue
 
         existing = Consignment.query.filter_by(cno=cno).first()
@@ -59,7 +62,7 @@ def process_excel(path):
         update_if_changed(existing, "wt", row["Wt"])
         update_if_changed(existing, "pcs", row["Pcs"])
 
-        # ✅ Commit only if changes happened
+       
         if updated:
             db.session.commit()
             count += 1
