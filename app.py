@@ -342,6 +342,39 @@ def list_all_fe():
         for c in consignments
     ])
 
+@app.route("/mark_delivered/<cno>", methods=["POST"])
+def mark_delivered(cno):
+    cons = Consignment.query.filter_by(cno=cno).first()
+
+    if not cons:
+        return jsonify({"error": "Consignment not found"}), 404
+
+    cons.is_delivered = True
+    cons.last_status = "Delivered"
+    cons.last_checked = datetime.now(IST)
+
+    db.session.commit()
+
+    return jsonify({"message": "Marked as delivered"})
+
+
+@app.route("/fe/mark_delivered/<cno>", methods=["POST"])
+def mark_delivered_fe(cno):
+    cons = FranchExpress.query.filter_by(cno=cno).first()
+
+    if not cons:
+        return jsonify({"error": "Franch Express consignment not found"}), 404
+
+    cons.is_delivered = True
+    cons.last_status = "Delivered"
+    cons.last_checked = datetime.now(IST)
+
+    db.session.commit()
+
+    return jsonify({"message": "Franch Express consignment marked as delivered"})
+
+
+
 
 if __name__ == "__main__":
     scheduler = BackgroundScheduler(timezone=IST)
