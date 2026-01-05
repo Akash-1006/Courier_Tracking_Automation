@@ -115,6 +115,26 @@ function TrackPage() {
     await loadData();
     setTrackingAll(false);
   };
+  const [sendingMail, setSendingMail] = useState(false);
+const [mailMsg, setMailMsg] = useState("");
+
+const sendDailyEmail = async () => {
+  if (!window.confirm("Send daily pending consignments email now?")) return;
+
+  setSendingMail(true);
+  setMailMsg("");
+
+  try {
+    const res = await fetch("http://127.0.0.1:5000/send_daily_email");
+    const data = await res.json();
+    setMailMsg(data.message || "Email sent successfully");
+  } catch (err) {
+    setMailMsg("Failed to send email");
+  }
+
+  setSendingMail(false);
+};
+
 
   // ✅ Filter + Search (CNo + Cnee)
   const filteredData = data.filter(row => {
@@ -131,26 +151,45 @@ function TrackPage() {
   return (
     <>
       {/* Header */}
-      <div className="flex justify-between mb-3">
-        <div className="flex items-center gap-1 mb-1">
-      <img 
-       src="/fledge_logo.png" 
-         alt="Logo" 
-           className="w-20 h-20 object-contain"
-          />
-         <h2 className="text-2xl font-bold">Fledge Enterprises</h2>
-        </div>
+      <div className="flex justify-between items-center mb-3">
+  {/* Left: Logo + Title */}
+  <div className="flex items-center gap-2">
+    <img
+      src="/fledge_logo.png"
+      alt="Logo"
+      className="w-20 h-20 object-contain"
+    />
+    <h2 className="text-2xl font-bold">Fledge Enterprises</h2>
+  </div>
 
-        <button
-          onClick={trackAll}
-          disabled={trackingAll}
-          className={`mt-5 mb-5 px-2 py-1 rounded-lg ${
-            trackingAll ? "bg-slate-600" : "bg-accent hover:bg-primary-blue"
-          }`}
-        >
-          {trackingAll ? "Updating..." : "Track All"}
-        </button>
-      </div>
+  {/* Right: Action Buttons */}
+  <div className="flex items-center gap-3">
+    <button
+      onClick={trackAll}
+      disabled={trackingAll}
+      className={`px-3 py-2 rounded-lg font-semibold transition ${
+        trackingAll
+          ? "bg-slate-600 cursor-not-allowed"
+          : "bg-accent hover:bg-primary-blue text-white"
+      }`}
+    >
+      {trackingAll ? "Updating..." : "Track All"}
+    </button>
+
+    <button
+      onClick={sendDailyEmail}
+      disabled={sendingMail}
+      className={`px-3 py-2 rounded-lg font-semibold transition ${
+        sendingMail
+          ? "bg-slate-600 cursor-not-allowed"
+          : "bg-accent hover:bg-primary-blue text-white"
+      }`}
+    >
+      {sendingMail ? "Sending..." : "Email Report"}
+    </button>
+  </div>
+</div>
+
              <hr className="border-slate-700 my-2" />
      <h1 className="text-2xl font-bold text-center">Professional Couriers</h1>
 
