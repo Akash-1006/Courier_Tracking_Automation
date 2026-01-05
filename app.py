@@ -12,7 +12,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import os
-
+from dotenv import load_dotenv
+load_dotenv() 
 
 app = Flask(__name__)
 
@@ -25,9 +26,9 @@ with app.app_context():
     db.create_all()
 IST = pytz.timezone("Asia/Kolkata")
 
-EMAIL_FROM = "ingrify.help@gmail.com"
-EMAIL_PASS = "cdyh tner fzod vhji"
-EMAIL_TO = "fledge.enterprises@gmail.com"
+EMAIL_FROM = os.getenv("EMAIL_FROM")
+EMAIL_PASS = os.getenv("EMAIL_PASS")
+EMAIL_TO = os.getenv("EMAIL_TO")
 
 
 def send_email(subject, html_body, attachment_path=None):
