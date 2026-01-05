@@ -383,4 +383,4 @@ if __name__ == "__main__":
     print(IST)
     scheduler.add_job(generate_daily_report, "cron", hour=9, minute=00)  # daily 9 AM IST
     scheduler.start()
-    app.run(host='0.0.0.0', port=5000, debug=True,use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=False,use_reloader=False)
