@@ -30,7 +30,8 @@ EMAIL_FROM = os.getenv("EMAIL_FROM")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_TO = os.getenv("EMAIL_TO")
 
-
+print("EMAIL_FROM:", os.getenv("EMAIL_FROM"))
+print("EMAIL_TO:", os.getenv("EMAIL_TO"))
 def send_email(subject, html_body, attachment_path=None):
     msg = MIMEMultipart()
     msg["From"] = EMAIL_FROM
