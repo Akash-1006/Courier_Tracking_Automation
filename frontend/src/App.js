@@ -38,6 +38,16 @@ function TrackPage() {
     const [y, m, d] = date.split("-");
     return `${d}-${m}-${y}`;
   }
+  const markDelivered = async (cno) => {
+  if (!window.confirm("Mark this consignment as Delivered?")) return;
+
+  await fetch(`http://127.0.0.1:5000/mark_delivered/${cno}`, {
+    method: "POST",
+  });
+
+  await loadData(); // refresh table
+};
+
 
   // ✅ Round weight
   function roundWeight(w) {
@@ -219,6 +229,18 @@ function TrackPage() {
                     >
                       View History
                     </button>
+
+                    {!item.delivered && (
+    <button
+      className="px-3 py-1 rounded-lg hover:bg-green-600"
+      onClick={(e) => {
+        e.stopPropagation();
+        markDelivered(item.cno);
+      }}
+    >
+      ✅
+    </button>
+  )}
                   </td>
                 </tr>
 
@@ -352,6 +374,16 @@ function TrackPageFe() {
     const [y, m, d] = date.split("-");
     return `${d}-${m}-${y}`;
   }
+  const markDeliveredFe = async (cno) => {
+  if (!window.confirm("Mark this Franch Express consignment as Delivered?")) return;
+
+  await fetch(`http://127.0.0.1:5000/fe/mark_delivered/${cno}`, {
+    method: "POST",
+  });
+
+  await loadData(); // refresh FE table
+};
+
 
   // ✅ Round weight
   function roundWeight(w) {
@@ -533,6 +565,18 @@ function TrackPageFe() {
                     >
                       View History
                     </button>
+
+                    {!item.delivered && (
+    <button
+      className="px-3 py-1 rounded-lg hover:bg-green-600"
+      onClick={(e) => {
+        e.stopPropagation();
+        markDeliveredFe(item.cno);
+      }}
+    >
+      ✅
+    </button>
+  )}
                   </td>
                 </tr>
 
