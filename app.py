@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from models import db, Consignment, TrackingHistory, FranchExpress
 from processor import process_excel
 from flask_cors import CORS
@@ -15,7 +15,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv() 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/build', static_url_path='')
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite3.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -376,6 +376,13 @@ def mark_delivered_fe(cno):
     return jsonify({"message": "Franch Express consignment marked as delivered"})
 
 
+@app.route('/')
+@app.route('/<path:path>')
+def serve(path=''):
+    if path != '' and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 
 if __name__ == "__main__":
@@ -383,4 +390,4 @@ if __name__ == "__main__":
     print(IST)
     scheduler.add_job(generate_daily_report, "cron", hour=9, minute=00)  # daily 9 AM IST
     scheduler.start()
-    app.run(host='0.0.0.0', port=5000, debug=False,use_reloader=False)
+    app.run(host='localhost', port=8000, debug=False, use_reloader=False)

@@ -41,7 +41,7 @@ function TrackPage() {
   const markDelivered = async (cno) => {
   if (!window.confirm("Mark this consignment as Delivered?")) return;
 
-  await fetch(`https://backend-ktuk.onrender.com/mark_delivered/${cno}`, {
+  await fetch(`/mark_delivered/${cno}`, {
     method: "POST",
   });
 
@@ -81,7 +81,7 @@ function TrackPage() {
   const [trackingAll, setTrackingAll] = useState(false);
 
   const loadData = async () => {
-    const res = await fetch("https://backend-ktuk.onrender.com/consignments");
+    const res = await fetch("/consignments");
     const d = await res.json();
 
     const cleaned = d.map(item => ({
@@ -111,7 +111,7 @@ function TrackPage() {
 
   const trackAll = async () => {
     setTrackingAll(true);
-    await fetch("https://backend-ktuk.onrender.com/track_consignments");
+    await fetch("/track_consignments");
     await loadData();
     setTrackingAll(false);
   };
@@ -125,7 +125,7 @@ const sendDailyEmail = async () => {
   setMailMsg("");
 
   try {
-    const res = await fetch("https://backend-ktuk.onrender.com/send_daily_email");
+    const res = await fetch("/send_daily_email");
     const data = await res.json();
     setMailMsg(data.message || "Email sent successfully");
   } catch (err) {
@@ -348,7 +348,7 @@ function UploadPage() {
     fd.append("file", file);
 
     try {
-      const res = await fetch("https://backend-ktuk.onrender.com/upload", {
+      const res = await fetch("/upload", {
         method: "POST",
         body: fd,
       });
@@ -416,7 +416,7 @@ function TrackPageFe() {
   const markDeliveredFe = async (cno) => {
   if (!window.confirm("Mark this Franch Express consignment as Delivered?")) return;
 
-  await fetch(`https://backend-ktuk.onrender.com/fe/mark_delivered/${cno}`, {
+  await fetch(`/fe/mark_delivered/${cno}`, {
     method: "POST",
   });
 
@@ -456,7 +456,7 @@ function TrackPageFe() {
   const [trackingAll, setTrackingAll] = useState(false);
 
   const loadData = async () => {
-    const res = await fetch("https://backend-ktuk.onrender.com/fe_consignments");
+    const res = await fetch("/fe_consignments");
     const d = await res.json();
 
     const cleaned = d.map(item => ({
@@ -486,7 +486,7 @@ function TrackPageFe() {
 
   const trackAll = async () => {
     setTrackingAll(true);
-    await fetch("https://backend-ktuk.onrender.com/track_franch");
+    await fetch("/track_franch");
     await loadData();
     setTrackingAll(false);
   };
@@ -679,7 +679,7 @@ function UploadPageFe() {
     fd.append("file", file);
 
     try {
-      const res = await fetch("https://backend-ktuk.onrender.com/upload_fe", {
+      const res = await fetch("/upload_fe", {
         method: "POST",
         body: fd,
       });

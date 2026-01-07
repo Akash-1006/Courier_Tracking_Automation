@@ -8,3 +8,41 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Node.js
+node_modules/
+.pnp/
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+
+# Production build
+frontend/build/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# System files
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+
+# Database
+instance/
+
+# Logs
+*.log
+
+# Python libs managed by Replit
+.pythonlibs/
