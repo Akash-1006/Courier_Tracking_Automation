@@ -17,13 +17,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite3.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 CORS(app)
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
+# with app.app_context():
+#     db.create_all()
 IST = pytz.timezone("Asia/Kolkata")
 
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -170,6 +170,13 @@ def generate_daily_report():
 def manual_email():
     generate_daily_report()
     return jsonify({"message": "Daily email sent manually!"})
+
+@app.route("/db-check")
+def db_check():
+    from models import Consignment
+    count = Consignment.query.count()
+    return {"consignments": count}
+
 
 @app.route("/upload", methods=["POST"])
 def upload_excel():
