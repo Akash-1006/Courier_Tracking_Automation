@@ -181,6 +181,10 @@ def db_check():
     count = Consignment.query.count()
     return {"consignments": count}
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
+
 
 @app.route("/upload", methods=["POST"])
 def upload_excel():
