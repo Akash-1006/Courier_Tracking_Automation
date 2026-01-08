@@ -170,6 +170,10 @@ def generate_daily_report():
 def manual_email():
     generate_daily_report()
     return jsonify({"message": "Daily email sent manually!"})
+    
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
 
 @app.route("/db-check")
 def db_check():
@@ -391,3 +395,4 @@ if __name__ == "__main__":
     scheduler.add_job(generate_daily_report, "cron", hour=9, minute=00)  # daily 9 AM IST
     scheduler.start()
     app.run(host='0.0.0.0', port=5000, debug=False,use_reloader=False)
+
