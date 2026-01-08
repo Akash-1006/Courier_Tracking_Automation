@@ -1,7 +1,7 @@
 import pandas as pd
 from models import db, FranchExpress
 
-EXPECTED_FE_COLS = ["Consignment No", "Date", "Name", "Pincode", "Destination", "WEIGHT", "Pcs"]
+EXPECTED_FE_COLS = ["Consignment No", "Date", "Name", "Pincode", "Destination", "WEIGHT", "Pcs","BOX"]
 
 def process_excel_fe(path):
     df = pd.read_excel(path, dtype=str)
@@ -29,7 +29,15 @@ def process_excel_fe(path):
         existing.cpincode = row["Pincode"]
         existing.destn = row["Destination"]
         existing.wt = row["WEIGHT"]
-        existing.pcs = row["Pcs"]
+        box_val = str(row.get("BOX", "")).strip()
+        pcs_val = str(row.get("Pcs", "")).strip()
+
+        if box_val:
+            existing.pcs = box_val
+        elif pcs_val:
+            existing.pcs = pcs_val
+        else:
+            existing.pcs = ""
 
     db.session.commit()
     return count
