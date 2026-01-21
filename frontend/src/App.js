@@ -1,23 +1,33 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import ReceiptReconcil from "./pages/ReceiptReconcil";
+import InvoiceAssist from "./pages/InvoiceAssist";
 // -----------------------------------------------------
 // ✅ MAIN APP LAYOUT
 // -----------------------------------------------------
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen flex bg-dark-bg text-text-light">
+      <div className="min-h-screen flex flex-col md:flex-row bg-dark-bg text-text-light">
         
         {/* Sidebar */}
         <Sidebar />
 
-        <main className="flex-1 p-10">
+        <main className="flex-1 p-4 md:p-8 lg:p-10">
           <Routes>
             <Route path="/" element={<TrackPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/fe_consignments" element={<TrackPageFe />} />
             <Route path="/upload_fe" element={<UploadPageFe />} />
+            <Route
+              path="/assistant/receipt-reconcil"
+              element={<ReceiptReconcil />}
+            />
+            <Route
+              path="/assistant/invoice-assist"
+              element={<InvoiceAssist />}
+            />
           </Routes>
         </main>
       </div>
@@ -151,7 +161,7 @@ const sendDailyEmail = async () => {
   return (
     <>
       {/* Header */}
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
   {/* Left: Logo + Title */}
   <div className="flex items-center gap-2">
     <img
@@ -195,15 +205,15 @@ const sendDailyEmail = async () => {
 
         <hr className="border-slate-700 my-2" />
       {/* Search + Filter */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <input
           type="text"
           placeholder="Search..."
-          className="px-3 py-2 bg-slate-800 rounded-lg w-64"
+          className="px-3 py-2 bg-slate-800 rounded-lg w-full sm:w-64"
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="px-3 py-2 bg-slate-800 rounded-lg"
+          className="px-3 py-2 bg-slate-800 rounded-lg w-full sm:w-auto"
           onChange={(e) => setFilter(e.target.value)}
         >
           <option value="all">All</option>
@@ -506,8 +516,8 @@ function TrackPageFe() {
   return (
     <>
       {/* Header */}
-      <div className="flex justify-between mb-3">
-        <div className="flex items-center gap-1 mb-1">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+        <div className="flex items-center gap-1">
       <img 
        src="/fledge_logo.png" 
          alt="Logo" 
@@ -531,15 +541,15 @@ function TrackPageFe() {
         <hr className="border-slate-700 my-2" />
 
       {/* Search + Filter */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <input
           type="text"
           placeholder="Search..."
-          className="px-3 py-2 bg-slate-800 rounded-lg w-64"
+          className="px-3 py-2 bg-slate-800 rounded-lg w-full sm:w-64"
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="px-3 py-2 bg-slate-800 rounded-lg"
+          className="px-3 py-2 bg-slate-800 rounded-lg w-full sm:w-auto"
           onChange={(e) => setFilter(e.target.value)}
         >
           <option value="all">All</option>

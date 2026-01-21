@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from models import db, Consignment, TrackingHistory, FranchExpress
 from processor import process_excel
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
@@ -13,6 +14,11 @@ from email.mime.base import MIMEBase
 from email import encoders
 import os
 from dotenv import load_dotenv
+
+from pdf_utils import extract_statement_entries, extract_receipt_entries
+from matcher import match_entries
+import shutil
+import uuid
 load_dotenv() 
 
 app = Flask(__name__)
@@ -184,13 +190,28 @@ def health():
 
 @app.route("/upload", methods=["POST"])
 def upload_excel():
-    file = request.files['file']
-    path = f"uploads/{file.filename}"
-    file.save(path)
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "Missing file"}), 400
 
-    count = process_excel(path)
-    track_all()
-    return jsonify({"message": "Uploaded and processed", "count": count})
+    os.makedirs("uploads", exist_ok=True)
+    safe_name = secure_filename(file.filename or "upload.xlsx")
+    name, ext = os.path.splitext(safe_name)
+    unique_name = f"{name}_{uuid.uuid4().hex}{ext or '.xlsx'}"
+    path = os.path.join("uploads", unique_name)
+
+    try:
+        file.save(path)
+        count = process_excel(path)  # stores to DB inside
+        track_all()
+        return jsonify({"message": "Uploaded and processed", "count": count})
+    finally:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception as _e:
+            # best-effort cleanup; don't fail the request due to cleanup issues
+            pass
 
 @app.route("/track_consignments", methods=["GET"])
 def track_all():
@@ -324,15 +345,30 @@ def track_franch():
 
 @app.route("/upload_fe", methods=["POST"])
 def upload_fe():
-    file = request.files['file']
-    path = f"uploads/{file.filename}"
-    file.save(path)
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "Missing file"}), 400
 
-    from process_excel_fe import process_excel_fe
-    count = process_excel_fe(path)
-    track_franch()
+    os.makedirs("uploads", exist_ok=True)
+    safe_name = secure_filename(file.filename or "upload.xlsx")
+    name, ext = os.path.splitext(safe_name)
+    unique_name = f"{name}_{uuid.uuid4().hex}{ext or '.xlsx'}"
+    path = os.path.join("uploads", unique_name)
 
-    return jsonify({"message": "FE Excel processed", "count": count})
+    try:
+        file.save(path)
+
+        from process_excel_fe import process_excel_fe
+        count = process_excel_fe(path)  # stores to DB inside
+        track_franch()
+
+        return jsonify({"message": "FE Excel processed", "count": count})
+    finally:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception as _e:
+            pass
 
 @app.route("/fe_consignments", methods=["GET"])
 def list_all_fe():
@@ -385,6 +421,64 @@ def mark_delivered_fe(cno):
     db.session.commit()
 
     return jsonify({"message": "Franch Express consignment marked as delivered"})
+
+UPLOAD_DIR = "checkstatement"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.route("/reconcile", methods=["POST"])
+def reconcile():
+    # ---- get files from request ----
+    statement = request.files.get("statement")
+    receipts = request.files.getlist("receipts")
+
+    if not statement or not receipts:
+        return jsonify({"error": "Missing files"}), 400
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    saved_paths = []
+    try:
+        # ---- save statement ----
+        stmt_name = secure_filename(statement.filename or "statement.pdf")
+        stmt_base, stmt_ext = os.path.splitext(stmt_name)
+        stmt_unique = f"{stmt_base}_{uuid.uuid4().hex}{stmt_ext or '.pdf'}"
+        stmt_path = os.path.join(UPLOAD_DIR, stmt_unique)
+        statement.save(stmt_path)
+        saved_paths.append(stmt_path)
+
+        statement_entries = extract_statement_entries(stmt_path)
+
+        # ---- save & extract receipts ----
+        receipt_entries = []
+        for r in receipts:
+            r_name = secure_filename(r.filename or "receipt.pdf")
+            r_base, r_ext = os.path.splitext(r_name)
+            r_unique = f"{r_base}_{uuid.uuid4().hex}{r_ext or '.pdf'}"
+            r_path = os.path.join(UPLOAD_DIR, r_unique)
+            r.save(r_path)
+            saved_paths.append(r_path)
+            receipt_entries.extend(extract_receipt_entries(r_path))
+
+        # ---- match ----
+        matched, missed = match_entries(statement_entries, receipt_entries)
+
+        return jsonify({
+            "matched": matched,
+            "missed": missed,
+            "matched_count": len(matched),
+            "missed_count": len(missed)
+        })
+    finally:
+        # Always cleanup checkstatement uploads after processing / returning results
+        for p in saved_paths:
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
+            except Exception as _e:
+                pass
+
+
+
 
 
 
