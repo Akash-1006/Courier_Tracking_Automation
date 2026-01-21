@@ -12,3 +12,6 @@ SQLAlchemy
 openpyxl
 lxml
 xlrd
+python-multipart
+pdfplumber
+gunicorn
