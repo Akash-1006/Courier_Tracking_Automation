@@ -173,7 +173,7 @@ const sendDailyEmail = async () => {
   </div>
 
   {/* Right: Action Buttons */}
-  <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3 flex-wrap">
     <button
       onClick={trackAll}
       disabled={trackingAll}
@@ -197,6 +197,12 @@ const sendDailyEmail = async () => {
     >
       {sendingMail ? "Sending..." : "Email Report"}
     </button>
+
+    {mailMsg && (
+      <span className="text-sm text-green-400">
+        {mailMsg}
+      </span>
+    )}
   </div>
 </div>
 
