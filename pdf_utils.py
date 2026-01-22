@@ -18,26 +18,32 @@ def parse_date(date_str):
 # -------- STATEMENT PDF --------
 def extract_statement_entries(pdf_path):
     entries = []
+
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             table = page.extract_table()
             if not table:
                 continue
 
-            for row in table[1:]:
+            for row in table:
                 try:
+                    # Skip header rows safely
+                    if row[1] and "DATE" in row[1].upper():
+                        continue
+
                     date = row[1]
                     desc = row[3]
                     deposit = row[6]
 
-                    if deposit:
+                    if date and deposit:
                         entries.append({
                             "date": date,
                             "description": normalize_text(desc),
                             "amount": clean_amount(deposit)
                         })
-                except:
+                except Exception:
                     continue
+
     return entries
 
 # -------- RECEIPT PDF --------
